@@ -137,8 +137,12 @@ public class SiteSearchWebAPI implements ViewTool {
 	 * This method will return a list of the site search index names
 	 * @return
 	 */
+	public List<String> listSearchIndicies(){
+	    return siteSearchAPI.listIndices();
+	}
+	
 	public List<String> listSearchIncidies(){
-		return siteSearchAPI.listIndices();
+		return listSearchIndicies();
 	}
 	
 }
