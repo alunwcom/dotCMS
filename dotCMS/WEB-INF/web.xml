@@ -78,6 +78,7 @@
 			<param-value>axis.servlet.</param-value>
 		</init-param>
 	</filter>
+
 	<!--END DOTMARKETING FILTERS-->
 	<!-- Don't ever delete the following comment tags, it will break the plugin system -->
 	<!-- BEGIN FILTERS -->
@@ -230,6 +231,7 @@
 		<filter-name>Secure AxisServlet Filter</filter-name>
 		<url-pattern>/webxservices/*</url-pattern>
 	</filter-mapping>
+
 	<!--END DOTMARKETING FILTER-MAPPINGS-->
 	<!-- Don't ever delete the following comment tags, it will break the plugin system -->
 	<!-- BEGIN LISTENERS -->

@@ -1,13 +1,13 @@
 <%@ include file="/html/portlet/ext/contentlet/publishing/init.jsp" %>
 <%@page import="com.dotmarketing.cms.factories.PublicEncryptionFactory"%>
 <%@page import="com.dotmarketing.business.APILocator"%>
-<%@page import="com.dotcms.publisher.endpoint.business.PublisherEndpointAPI"%>
+<%@page import="com.dotcms.publisher.endpoint.business.PublishingEndPointAPI"%>
 <%@page import="com.dotcms.publisher.endpoint.bean.PublishingEndPoint"%>
 <%@ page import="com.liferay.portal.language.LanguageUtil"%>
 <%
 	String identifier = request.getParameter("id");
-	PublisherEndpointAPI peAPI = APILocator.getPublisherEndpointAPI();
-	PublishingEndPoint currentEndpoint = peAPI.findEndpointById(identifier);
+	PublishingEndPointAPI peAPI = APILocator.getPublisherEndPointAPI();
+	PublishingEndPoint currentEndpoint = peAPI.findEndPointById(identifier);
 	if(currentEndpoint ==null){
 		currentEndpoint = new PublishingEndPoint();
 		currentEndpoint.setEnabled(true);
@@ -18,7 +18,6 @@
 	}
 	
 	List<String> groups = peAPI.findSendGroups();
-	
 %>
 
 <script type="text/javascript">
@@ -190,7 +189,7 @@
 					<%= LanguageUtil.get(pageContext, "publisher_Endpoints_sendGroup") %>:
 				</td>
 				<td>		
-					<select name="groupId" id="groupId" dojoType="dijit.form.ComboBox">
+					<select name="groupId" id="groupId" dojoType="dijit.form.ComboBox"   promptMessage="<%= UtilMethods.javaScriptify(LanguageUtil.get(pageContext, "publisher_Endpoint_Server_Group_Prompt_Message")) %>" >
 
 						<%for(String s : groups){ %>
 							<option <%if(s!=null && s.equals(currentEndpoint.getGroupId())){ %>selected="true"<%} %> value="<%=UtilMethods.escapeDoubleQuotes(UtilMethods.webifyString(s))%>"><%=s%></option>

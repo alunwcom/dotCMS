@@ -383,7 +383,7 @@ public class ESContentletAPIImpl implements ContentletAPI {
                     if (InodeUtils.isSet(id.getInode()) && id.getAssetType().equals("contentlet")) {
                     	Contentlet fileAssetCont = null;
                     	try {
-                    		fileAssetCont = findContentletByIdentifier(id.getId(), true, APILocator.getLanguageAPI().getDefaultLanguage().getId(), APILocator.getUserAPI().getSystemUser(), false);
+                    		fileAssetCont = findContentletByIdentifier(id.getId(), true, contentlet.getLanguageId(), APILocator.getUserAPI().getSystemUser(), false);
                         } catch(DotContentletStateException se) {
                         	fileAssetCont = findContentletByIdentifier(id.getId(), false, APILocator.getLanguageAPI().getDefaultLanguage().getId(), APILocator.getUserAPI().getSystemUser(), false);
                         }
@@ -2126,6 +2126,8 @@ public class ESContentletAPIImpl implements ContentletAPI {
 				    }
 				    APILocator.getIdentifierAPI().save(ident);
 				}
+				
+				
 
 
 				APILocator.getVersionableAPI().setWorking(contentlet);
@@ -2863,10 +2865,16 @@ public class ESContentletAPIImpl implements ContentletAPI {
             if(value instanceof Date){
                 contentlet.setDateProperty(field.getVelocityVarName(), (Date)value);
             }else if(value instanceof String){
-                try{
-                    contentlet.setDateProperty(field.getVelocityVarName(),DateUtil.convertDate((String)value, dateFormats));
-                }catch (Exception e) {
-                    throw new DotContentletStateException("Unable to convert string to date " + value);
+                if(((String) value).trim().length()>0) {
+                    try {
+                        contentlet.setDateProperty(field.getVelocityVarName(),
+                                DateUtil.convertDate((String)value, dateFormats));
+                    }catch (Exception e) {
+                        throw new DotContentletStateException("Unable to convert string to date " + value);
+                    }
+                }
+                else {
+                    contentlet.setDateProperty(field.getVelocityVarName(), null);
                 }
             }else{
                 throw new DotContentletStateException("Date fields must either be of type String or Date");
