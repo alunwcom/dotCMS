@@ -1,5 +1,0 @@
-Manifest-Version: 1.0
-Deploy-Class: com.wiley.contentindex.ContentIndexPluginDeployer
-Plugin-Name: Content Index Plugin
-Plugin-Version: 1.0.40
-Author: aluwilliam
