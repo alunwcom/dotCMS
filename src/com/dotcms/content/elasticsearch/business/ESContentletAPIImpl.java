@@ -591,8 +591,9 @@ public class ESContentletAPIImpl implements ContentletAPI {
             try{
                 Map<String, Object> hm = new HashMap<String, Object>();
                 ContentletSearch conwrapper= new ContentletSearch();
-                conwrapper.setIdentifier(sh.getSource().get("identifier").toString());
-                conwrapper.setInode(sh.getSource().get("inode").toString());
+                conwrapper.setIdentifier(sh.field("identifier").getValue().toString());
+                conwrapper.setInode(sh.field("inode").getValue().toString());
+                
                 list.add(conwrapper);
             }
             catch(Exception e){
@@ -2290,7 +2291,7 @@ public class ESContentletAPIImpl implements ContentletAPI {
 			                	}
 			                	else if (oldFile.exists()) {
 			                		// otherwise, we copy the files as hardlinks
-			                		FileUtil.copyFile(oldFile, newFile, Config.getBooleanProperty("CONTENT_VERSION_HARD_LINK", true));
+			                		FileUtil.copyFile(oldFile, newFile);
 			                	}
 			                	contentlet.setBinary(velocityVarNm, newFile);
 			                }
