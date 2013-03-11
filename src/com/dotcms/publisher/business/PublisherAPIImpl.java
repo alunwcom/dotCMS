@@ -10,12 +10,12 @@ import com.dotcms.publisher.util.PublisherUtil;
 import com.dotmarketing.beans.Identifier;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.PermissionAPI;
-import com.dotmarketing.cache.StructureCache;
 import com.dotmarketing.common.db.DotConnect;
 import com.dotmarketing.db.DbConnectionFactory;
 import com.dotmarketing.db.HibernateUtil;
 import com.dotmarketing.exception.DotHibernateException;
 import com.dotmarketing.portlets.folders.model.Folder;
+import com.dotmarketing.portlets.structure.factories.StructureFactory;
 import com.dotmarketing.portlets.structure.model.Structure;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
@@ -84,7 +84,7 @@ public class PublisherAPIImpl extends PublisherAPI{
 					}
 
 					PermissionAPI strPerAPI = APILocator.getPermissionAPI();
-
+					
 
 
 					Identifier iden = APILocator.getIdentifierAPI().find(identifier);
@@ -93,10 +93,25 @@ public class PublisherAPIImpl extends PublisherAPI{
 					if(!UtilMethods.isSet(iden.getId())) { // we have an inode, not an identifier
 					    try {
     						// check if it is a structure
-    						Structure st = StructureCache.getStructureByInode(identifier);
+    						Structure st = null;
+					    	List<Structure> sts = StructureFactory.getStructures();
+    						for (Structure s : sts) {
+    							if(s.getInode().equals(identifier)) {
+    								st = s;
+    							}
+							}
     						Folder folder = null;
-
-    						if(UtilMethods.isSet(st)) {
+    						
+    						/**
+    						 * ISSUE 2244: https://github.com/dotCMS/dotCMS/issues/2244
+    						 * 
+    						 */
+    						// check if it is a category
+    						if(CATEGORY.equals(identifier)) {
+    							type = "category";
+    						}
+    						
+    						else if(UtilMethods.isSet(st)) {
     							if (!strPerAPI.doesUserHavePermission(st,PermissionAPI.PERMISSION_PUBLISH, user)) {
     								Logger.info(PublisherAPIImpl.class, "User: " + user.getUserId() + " does not have Publish Permission over asset with Identifier: " + st.getIdentifier() );
     								continue;
@@ -104,6 +119,7 @@ public class PublisherAPIImpl extends PublisherAPI{
 
     							type = "structure";
     						}
+    						
     						// check if it is a folder
     						else if(UtilMethods.isSet(folder = APILocator.getFolderAPI().find(identifier, user, false))) {
     							if (!strPerAPI.doesUserHavePermission(folder,PermissionAPI.PERMISSION_PUBLISH, user)) {
@@ -112,7 +128,7 @@ public class PublisherAPIImpl extends PublisherAPI{
     							}
 
     							type = "folder";
-    						}
+    						}  						
 					    }
 					    catch(Exception ex) {
 					        // well, none of those
@@ -181,7 +197,13 @@ public class PublisherAPIImpl extends PublisherAPI{
 
 					if(!UtilMethods.isSet(iden.getId())) { // we have an inode, not an identifier
 						// check if it is a structure
-						Structure st = StructureCache.getStructureByInode(identifier);
+						Structure st = null;
+				    	List<Structure> sts = StructureFactory.getStructures();
+						for (Structure s : sts) {
+							if(s.getInode().equals(identifier)) {
+								st = s;
+							}
+						}
 						Folder folder = null;
 
 						if(UtilMethods.isSet(st)) {

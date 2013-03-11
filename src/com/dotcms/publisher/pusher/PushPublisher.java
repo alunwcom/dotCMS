@@ -14,22 +14,25 @@ import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.io.FileUtils;
 
 import com.dotcms.enterprise.LicenseUtil;
+import com.dotcms.enterprise.publishing.remote.bundler.CategoryBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.ContainerBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.ContentBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.DependencyBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.FolderBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.HTMLPageBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.HostBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.LanguageBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.LinkBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.RelationshipBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.StructureBundler;
+import com.dotcms.enterprise.publishing.remote.bundler.TemplateBundler;
 import com.dotcms.publisher.business.DotPublisherException;
 import com.dotcms.publisher.business.EndpointDetail;
 import com.dotcms.publisher.business.PublishAuditAPI;
 import com.dotcms.publisher.business.PublishAuditHistory;
 import com.dotcms.publisher.business.PublishAuditStatus;
+import com.dotcms.publisher.business.PublishQueueElement;
 import com.dotcms.publisher.endpoint.bean.PublishingEndPoint;
-import com.dotcms.publisher.pusher.bundler.ContainerBundler;
-import com.dotcms.publisher.pusher.bundler.ContentBundler;
-import com.dotcms.publisher.pusher.bundler.DependencyBundler;
-import com.dotcms.publisher.pusher.bundler.FolderBundler;
-import com.dotcms.publisher.pusher.bundler.HTMLPageBundler;
-import com.dotcms.publisher.pusher.bundler.HostBundler;
-import com.dotcms.publisher.pusher.bundler.LanguageBundler;
-import com.dotcms.publisher.pusher.bundler.LinkBundler;
-import com.dotcms.publisher.pusher.bundler.StructureBundler;
-import com.dotcms.publisher.pusher.bundler.TemplateBundler;
 import com.dotcms.publisher.util.TrustFactory;
 import com.dotcms.publishing.BundlerUtil;
 import com.dotcms.publishing.DotPublishingException;
@@ -235,23 +238,41 @@ public class PushPublisher extends Publisher {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public List<Class> getBundlers() {
+		boolean buildCategories = false;
+		for(PublishQueueElement element : ((PushPublisherConfig)config).getAssets())
+			if(element.getType().equals("category"))
+				buildCategories = true;
 		List<Class> list = new ArrayList<Class>();
 		
 		//The order is important cause 
 		//I need to add all containers associated with templates
-		list.add(DependencyBundler.class);
-		list.add(HostBundler.class);
-		list.add(ContentBundler.class);
-		list.add(FolderBundler.class);
-		list.add(TemplateBundler.class);
-		list.add(ContainerBundler.class);
-		list.add(HTMLPageBundler.class);
-		list.add(LinkBundler.class);
 		
-		if(Config.getBooleanProperty("PUSH_PUBLISHING_PUSH_STRUCTURES"))
-			list.add(StructureBundler.class);
-		
-		list.add(LanguageBundler.class);
+		/**
+		 * ISSUE #2244: https://github.com/dotCMS/dotCMS/issues/2244
+		 * 
+		 */
+		if(buildCategories)
+			list.add(CategoryBundler.class);
+		else {
+			list.add(DependencyBundler.class);
+			list.add(HostBundler.class);
+			list.add(ContentBundler.class);
+			list.add(FolderBundler.class);
+			list.add(TemplateBundler.class);
+			list.add(ContainerBundler.class);
+			list.add(HTMLPageBundler.class);
+			list.add(LinkBundler.class);
+			
+			if(Config.getBooleanProperty("PUSH_PUBLISHING_PUSH_STRUCTURES")){
+				list.add(StructureBundler.class);
+				/**
+				 * ISSUE #2222: https://github.com/dotCMS/dotCMS/issues/2222
+				 * 
+				 */
+				list.add(RelationshipBundler.class);			
+			}
+			list.add(LanguageBundler.class);
+		}
 		
 		return list;
 	}

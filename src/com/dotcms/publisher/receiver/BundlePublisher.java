@@ -18,22 +18,24 @@ import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarInputStream;
 
 import com.dotcms.enterprise.LicenseUtil;
+import com.dotcms.enterprise.publishing.remote.handler.CategoryHandler;
+import com.dotcms.enterprise.publishing.remote.handler.ContainerHandler;
+import com.dotcms.enterprise.publishing.remote.handler.ContentHandler;
+import com.dotcms.enterprise.publishing.remote.handler.FolderHandler;
+import com.dotcms.enterprise.publishing.remote.handler.HTMLPageHandler;
+import com.dotcms.enterprise.publishing.remote.handler.HostHandler;
+import com.dotcms.enterprise.publishing.remote.handler.LanguageHandler;
+import com.dotcms.enterprise.publishing.remote.handler.LinkHandler;
+import com.dotcms.enterprise.publishing.remote.handler.RelationshipHandler;
+import com.dotcms.enterprise.publishing.remote.handler.StructureHandler;
+import com.dotcms.enterprise.publishing.remote.handler.TemplateHandler;
 import com.dotcms.publisher.business.DotPublisherException;
 import com.dotcms.publisher.business.EndpointDetail;
 import com.dotcms.publisher.business.PublishAuditAPI;
 import com.dotcms.publisher.business.PublishAuditHistory;
 import com.dotcms.publisher.business.PublishAuditStatus;
 import com.dotcms.publisher.business.PublisherAPIImpl;
-import com.dotcms.publisher.receiver.handler.ContainerHandler;
-import com.dotcms.publisher.receiver.handler.ContentHandler;
-import com.dotcms.publisher.receiver.handler.FolderHandler;
-import com.dotcms.publisher.receiver.handler.HTMLPageHandler;
-import com.dotcms.publisher.receiver.handler.HostHandler;
 import com.dotcms.publisher.receiver.handler.IHandler;
-import com.dotcms.publisher.receiver.handler.LanguageHandler;
-import com.dotcms.publisher.receiver.handler.LinkHandler;
-import com.dotcms.publisher.receiver.handler.StructureHandler;
-import com.dotcms.publisher.receiver.handler.TemplateHandler;
 import com.dotcms.publishing.DotPublishingException;
 import com.dotcms.publishing.PublishStatus;
 import com.dotcms.publishing.Publisher;
@@ -59,23 +61,34 @@ public class BundlePublisher extends Publisher {
     public PublisherConfig init(PublisherConfig config) throws DotPublishingException {
         if(LicenseUtil.getLevel()<200)
             throw new RuntimeException("need an enterprise licence to run this");
-        
         handlers = new ArrayList<IHandler>();
         //The order is really important
-        handlers.add(new HostHandler());
-        handlers.add(new FolderHandler());
-        
-        if(Config.getBooleanProperty("PUSH_PUBLISHING_PUSH_STRUCTURES"))
-        	handlers.add(new StructureHandler());
+    	
+        /**
+		 * ISSUE #2244: https://github.com/dotCMS/dotCMS/issues/2244
+		 * 
+		 */        
+       	handlers.add(new CategoryHandler());
+       	handlers.add(new HostHandler());
+       	handlers.add(new FolderHandler());
+           
+       	if(Config.getBooleanProperty("PUSH_PUBLISHING_PUSH_STRUCTURES")){
+       		handlers.add(new StructureHandler());
+   			/**
+   			 * ISSUE #2222: https://github.com/dotCMS/dotCMS/issues/2222
+   			 * 
+   			 */        	
+           	handlers.add(new RelationshipHandler());
+       	}
+           
+       	handlers.add(new ContainerHandler());
+       	handlers.add(new TemplateHandler());
+       	handlers.add(new HTMLPageHandler());
+           
+       	handlers.add(new ContentHandler());
+       	handlers.add(new LanguageHandler());
+       	handlers.add(new LinkHandler());
 
-        handlers.add(new ContainerHandler());
-        handlers.add(new TemplateHandler());
-        handlers.add(new HTMLPageHandler());
-        
-        handlers.add(new ContentHandler());
-        handlers.add(new LanguageHandler());
-        handlers.add(new LinkHandler());
-        
         auditAPI = PublishAuditAPI.getInstance();
 
         this.config = super.init(config);
