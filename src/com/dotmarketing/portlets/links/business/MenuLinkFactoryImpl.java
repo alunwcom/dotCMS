@@ -20,8 +20,10 @@ import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotHibernateException;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.exception.DotSecurityException;
+import com.dotmarketing.portlets.folders.model.Folder;
 import com.dotmarketing.portlets.links.model.Link;
 import com.dotmarketing.portlets.links.model.LinkVersionInfo;
+import com.dotmarketing.util.InodeUtils;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.PaginatedArrayList;
 import com.dotmarketing.util.UtilMethods;
@@ -41,9 +43,11 @@ public class MenuLinkFactoryImpl implements MenuLinkFactory {
 		
 	}
 	
-	
-	
 	public void save(Link menuLink) throws DotDataException, DotStateException, DotSecurityException {
+	    save(menuLink, APILocator.getFolderAPI().findSystemFolder());
+	}
+	
+	public void save(Link menuLink, Folder destination) throws DotDataException, DotStateException, DotSecurityException {
 		
 		
 		if(UtilMethods.isSet(menuLink.getInode())) {
@@ -54,29 +58,34 @@ public class MenuLinkFactoryImpl implements MenuLinkFactory {
 				Logger.debug(this.getClass(), dhe.getMessage());
 			}
 			
-			if(oldLink!=null) {
+			if(oldLink!=null && InodeUtils.isSet(oldLink.getIdentifier())) {
 				oldLink.copy(menuLink);
 				HibernateUtil.saveOrUpdate(oldLink);
 				HibernateUtil.flush();
 				menuLink = oldLink;
 			} else {
+				String existingId=menuLink.getIdentifier();
+				menuLink.setIdentifier(null);
 				HibernateUtil.saveWithPrimaryKey(menuLink, menuLink.getInode());
+
+				Identifier id=APILocator.getIdentifierAPI().find(existingId);
+				if(id==null || !InodeUtils.isSet(id.getId())) {
+					APILocator.getIdentifierAPI().createNew(menuLink, destination, existingId);
+				}else {
+					menuLink.setIdentifier(existingId);
+				}
+				HibernateUtil.saveOrUpdate(menuLink);
 				HibernateUtil.flush();
 			}
-			
+			APILocator.getIdentifierAPI().updateIdentifierURI(menuLink, destination);
+			WorkingCache.removeAssetFromCache(menuLink);
+	        LiveCache.removeAssetFromCache(menuLink);
+	        
 		} else {
+		    HibernateUtil.save(menuLink);
+			APILocator.getIdentifierAPI().createNew(menuLink, destination);
 			HibernateUtil.save(menuLink);
-			HibernateUtil.flush();
-		}
-		if(UtilMethods.isSet(menuLink.getIdentifier())) {
-    		menuLinkCache.add(menuLink.getInode(), menuLink);
-    		WorkingCache.removeAssetFromCache(menuLink);
-    		WorkingCache.addToWorkingAssetToCache(menuLink);
-    		LiveCache.removeAssetFromCache(menuLink);
-    		APILocator.getVersionableAPI().setWorking(menuLink);
-    		if (menuLink.isLive()) {
-    			LiveCache.addToLiveAssetToCache(menuLink);
-    		}
+			APILocator.getVersionableAPI().setWorking(menuLink);
 		}
 	}
 

@@ -156,8 +156,6 @@
 
 
 	var treeRoleOptionTemplate = '${nodeName}';
-	var treeModel;
-	var jsonStore;
 	var lastSelectedNode;
 
 	function buildRolesTree(tree) {
@@ -168,11 +166,12 @@
 
 		// if tree is null, we are not filtering, so load the root nodes only calling RoleResource
 		if(tree==null) {
-			store = new dojox.data.JsonRestStore({ target: "/api/role/loadchildren/id/", labelAttribute:"name"});
+			store = new dojox.data.JsonRestStore({ target: "/api/role/loadchildren/time/"+new Date()+"/id/", labelAttribute:"name", urlPreventCache: true});
 		} else { // if tree is not null, we need to build a store with the JSON tree contained in it
 			store = new dojo.data.ItemFileReadStore({ data: tree });
 			autoExpand = true;
 		}
+
 
 	    treeModel = new dijit.tree.TreeStoreModel({
 	        store: store,
@@ -288,7 +287,6 @@
 	        autoExpand: autoExpand,
 	        persist: false
 	    }, "rolesTree");
-
 
 		var menu = dijit.byId("roleTreeMenu");
         // when we right-click anywhere on the tree, make sure we open the menu
@@ -435,7 +433,8 @@
 		var parentRoleId = norm(role.parent);
 
 		var parent = findRole(parentRoleId);
-		dijit.byId('parentRole').set('value', parent.id==role.id?"Root Role":parent.name);
+// 		dijit.byId('parentRole').set('value', parent.id==role.id?"Root Role":parent.name);
+		dojo.byId('parentRoleDiv').innerHTML = parent.id==role.id?"Root Role":parent.name;
 		dojo.byId('parentRoleValue').value = parent.id==role.id?"0":parent.id
 // 		dijit.byId('parentRole').set('displayedValue', parent.id==role.id?"Root Role":parent.name);
 		dijit.byId('editUsers').attr('value', norm(role.editUsers) == true?true:false);
@@ -464,10 +463,12 @@
 
 		if (currentRole) {
 			dojo.byId('parentRoleValue').value = currentRole.id;
-			dijit.byId('parentRole').set('value', currentRole.name);
+// 			dijit.byId('parentRole').set('value', currentRole.name);
+			dojo.byId('parentRoleDiv').innerHTML = currentRole.name;
 		} else {
 			dojo.byId('parentRoleValue').value = "0";
-			dijit.byId('parentRole').set('value', "Root Role");
+// 			dijit.byId('parentRole').set('value', "Root Role");
+			dojo.byId('parentRoleDiv').innerHTML = "Root Role";
 		}
 
 		dijit.byId('addRoleDialog').show();

@@ -19,6 +19,7 @@ import com.dotmarketing.business.DotStateException;
 import com.dotmarketing.business.IdentifierAPI;
 import com.dotmarketing.cache.FieldsCache;
 import com.dotmarketing.cache.StructureCache;
+import com.dotmarketing.common.model.ContentletSearch;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.factories.MultiTreeFactory;
@@ -84,7 +85,7 @@ public class DependencyManager {
 				folders.add(asset.getAsset());
 			} else if(asset.getType().equals("host")) {
 				hosts.add(asset.getAsset());
-			}
+			}  
 		}
 
 		if(config.getOperation().equals(Operation.PUBLISH)) {
@@ -95,7 +96,10 @@ public class DependencyManager {
     		setContainerDependencies();
     		setStructureDependencies();
     		setContentDependencies(config.getLuceneQueries());
+		}else{
+			contents.addAll(getContentIds(config.getLuceneQueries()));
 		}
+		
 
 		config.setHostSet(hosts);
 		config.setFolders(folders);
@@ -386,10 +390,12 @@ public class DependencyManager {
 	
 	private void processList(List<Contentlet> cons) throws DotDataException, DotSecurityException {
 	    Set<Contentlet> contentsToProcess = new HashSet<Contentlet>();
+	    Set<Contentlet> contentsWithDependenciesToProcess = new HashSet<Contentlet>();
 
         //Getting all related content
-
+	    
         for (Contentlet con : cons) {
+        	hosts.add(con.getHost()); // add the host dependency
             contentsToProcess.add(con);
 
             Map<Relationship, List<Contentlet>> contentRel =
@@ -408,11 +414,40 @@ public class DependencyManager {
             }
         }
 
+        for (Contentlet con : contentsToProcess) {
+        	hosts.add(con.getHost()); // add the host dependency
+        	contentsWithDependenciesToProcess.add(con);
+	        //Copy asset files to bundle folder keeping original folders structure
+	        List<Field> fields=FieldsCache.getFieldsByStructureInode(con.getStructureInode());
+	
+	        for(Field ff : fields) {
+	            if (ff.getFieldType().equals(Field.FieldType.IMAGE.toString())
+	                    || ff.getFieldType().equals(Field.FieldType.FILE.toString())) {
+	
+	                try {
+	                    String value = "";
+	                    if(UtilMethods.isSet(APILocator.getContentletAPI().getFieldValue(con, ff))){
+	                        value = APILocator.getContentletAPI().getFieldValue(con, ff).toString();
+	                    }
+	                    //Identifier id = (Identifier) InodeFactory.getInode(value, Identifier.class);
+	                    Identifier id = APILocator.getIdentifierAPI().find(value);
+	                    if (InodeUtils.isSet(id.getInode()) && id.getAssetType().equals("contentlet")) {
+	                    	contentsWithDependenciesToProcess.addAll(
+	                    			APILocator.getContentletAPI()
+	                                .search("+identifier:"+id.getId(), 0, 0, "moddate", user, false));
+	                    }
+	                } catch (Exception ex) {
+	                    Logger.debug(this, ex.toString());
+	                    throw new DotStateException("Problem occured while publishing file");
+	                }
+	            }
+	
+	        }
+        }
         
         // Adding the Contents (including related) and adding filesAsContent
-        
-        for (Contentlet con : contentsToProcess) {
-
+        for (Contentlet con : contentsWithDependenciesToProcess) {
+        	hosts.add(con.getHost()); // add the host dependency
             contents.add(con.getIdentifier()); // adding the content (including related)
             folders.add(con.getFolder()); // adding content folder
 
@@ -452,47 +487,37 @@ public class DependencyManager {
             if(Config.getBooleanProperty("PUSH_PUBLISHING_PUSH_STRUCTURES")) {
                 structures.add(con.getStructureInode());
             }
-
-            //Copy asset files to bundle folder keeping original folders structure
-            List<Field> fields=FieldsCache.getFieldsByStructureInode(con.getStructureInode());
-
-            for(Field ff : fields) {
-                if (ff.getFieldType().equals(Field.FieldType.IMAGE.toString())
-                        || ff.getFieldType().equals(Field.FieldType.FILE.toString())) {
-
-                    try {
-                        String value = "";
-                        if(UtilMethods.isSet(APILocator.getContentletAPI().getFieldValue(con, ff))){
-                            value = APILocator.getContentletAPI().getFieldValue(con, ff).toString();
-                        }
-                        //Identifier id = (Identifier) InodeFactory.getInode(value, Identifier.class);
-                        Identifier id = APILocator.getIdentifierAPI().find(value);
-                        if (InodeUtils.isSet(id.getInode()) && id.getAssetType().equals("contentlet")) {
-                            contents.add(id.getId()); // adding files as content
-                        }
-                    } catch (Exception ex) {
-                        Logger.debug(this, ex.toString());
-                        throw new DotStateException("Problem occured while publishing file");
-                    }
-                }
-
-            }
-
         }
 
 	}
 
+	private List<String> getContentIds(List<String> luceneQueries){
+		List<String> ret = new ArrayList<String>();
+		List<ContentletSearch> cs = new ArrayList<ContentletSearch>();
+		for(String luceneQuery: luceneQueries) {
+		    try {
+				cs = APILocator.getContentletAPI().searchIndex(
+				        luceneQuery, 0, 0, "moddate", user, false);
+			} catch (Exception e) {
+				Logger.error(this, e.getMessage(), e);
+			}
+		}
+		for (ContentletSearch contentletSearch : cs) {
+			ret.add(contentletSearch.getIdentifier());
+		}
+		return ret;
+	}
+	
 	private void setContentDependencies(List<String> luceneQueries) throws DotBundleException {
 		try {
 		    // we need to process contents already taken as dependency
-            for(String id : contents)
-                processList(
-                   APILocator.getContentletAPI()
-                      .search("+identifier:"+id, 0, 0, "moddate", user, false));
+			Set<String> cons = new HashSet<String>(contents);
+            for(String id : cons){
+                processList(APILocator.getContentletAPI().search("+identifier:"+id, 0, 0, "moddate", user, false));
+            }
             
     		for(String luceneQuery: luceneQueries) {
-    		    List<Contentlet> cs = APILocator.getContentletAPI().search(
-    		            luceneQuery, 0, 0, "moddate", user, false);
+    		    List<Contentlet> cs = APILocator.getContentletAPI().search(luceneQuery, 0, 0, "moddate", user, false);
     			processList(cs);
     		}
 

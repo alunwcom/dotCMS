@@ -1,5 +1,22 @@
 package com.dotmarketing.portlets.contentlet.business;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.lucene.queryParser.ParseException;
+import org.junit.Ignore;
+import org.junit.Test;
+
 import com.dotcms.content.business.DotMappingException;
 import com.dotcms.content.elasticsearch.business.ESMappingAPIImpl;
 import com.dotmarketing.beans.Identifier;
@@ -14,6 +31,7 @@ import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.factories.MultiTreeFactory;
 import com.dotmarketing.factories.TreeFactory;
+import com.dotmarketing.portlets.AssetUtil;
 import com.dotmarketing.portlets.ContentletBaseTest;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.files.model.File;
@@ -29,15 +47,6 @@ import com.dotmarketing.portlets.structure.model.Field;
 import com.dotmarketing.portlets.structure.model.Relationship;
 import com.dotmarketing.portlets.structure.model.Structure;
 import com.dotmarketing.util.UUIDGenerator;
-
-import org.apache.commons.lang.time.FastDateFormat;
-import org.apache.lucene.queryParser.ParseException;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import java.util.*;
-
-import static org.junit.Assert.*;
 
 /**
  * Created by Jonathan Gamba.
@@ -733,42 +742,41 @@ public class ContentletAPITest extends ContentletBaseTest {
     public void addLinkToContentlet () throws Exception {
 
         Link menuLink = null;
-        try {
 
-            String RELATION_TYPE = new Link().getType();
+        String RELATION_TYPE = new Link().getType();
 
-            //Getting a known structure
-            Structure structure = structures.iterator().next();
+        //Getting a known structure
+        Structure structure = structures.iterator().next();
 
-            //Create a menu link
-            menuLink = createMenuLink();
+        //Create a menu link
+        menuLink = createMenuLink();
 
-            //Search the contentlets for this structure
-            List<Contentlet> contentletList = contentletAPI.findByStructure( structure, user, false, 0, 0 );
-            Contentlet contentlet = contentletList.iterator().next();
+        //Search the contentlets for this structure
+        List<Contentlet> contentletList = contentletAPI.findByStructure( structure, user, false, 0, 0 );
+        Contentlet contentlet = contentletList.iterator().next();
 
-            //Add to this contentlet a link
-            contentletAPI.addLinkToContentlet( contentlet, menuLink.getInode(), RELATION_TYPE, user, false );
+        //Add to this contentlet a link
+        contentletAPI.addLinkToContentlet( contentlet, menuLink.getInode(), RELATION_TYPE, user, false );
 
-            //Verify if the link was associated
-            //List<Link> relatedLinks = contentletAPI.getRelatedLinks( contentlet, user, false );//TODO: This method is not working but we are not testing it on this call....
+        //Verify if the link was associated
+        //List<Link> relatedLinks = contentletAPI.getRelatedLinks( contentlet, user, false );//TODO: This method is not working but we are not testing it on this call....
 
-            //Get the contentlet Identifier to gather the menu links
-            Identifier menuLinkIdentifier = APILocator.getIdentifierAPI().find( menuLink );
+        //Get the contentlet Identifier to gather the menu links
+        Identifier menuLinkIdentifier = APILocator.getIdentifierAPI().find( menuLink );
 
-            //Verify if the relation was created
-            Tree tree = TreeFactory.getTree( contentlet.getInode(), menuLinkIdentifier.getInode(), RELATION_TYPE );
+        //Verify if the relation was created
+        Tree tree = TreeFactory.getTree( contentlet.getInode(), menuLinkIdentifier.getInode(), RELATION_TYPE );
 
-            //Validations
-            assertNotNull( tree );
-            assertNotNull( tree.getParent() );
-            assertNotNull( tree.getChild() );
-            assertEquals( tree.getParent(), contentlet.getInode() );
-            assertEquals( tree.getChild(), menuLinkIdentifier.getInode() );
-            assertEquals( tree.getRelationType(), RELATION_TYPE );
-        } finally {
-            menuLinkAPI.delete( menuLink, user, false );
-        }
+        //Validations
+        assertNotNull( tree );
+        assertNotNull( tree.getParent() );
+        assertNotNull( tree.getChild() );
+        assertEquals( tree.getParent(), contentlet.getInode() );
+        assertEquals( tree.getChild(), menuLinkIdentifier.getInode() );
+        assertEquals( tree.getRelationType(), RELATION_TYPE );
+    
+        menuLinkAPI.delete( menuLink, user, false );
+    
     }
 
     /**
@@ -1106,14 +1114,14 @@ public class ContentletAPITest extends ContentletBaseTest {
      * @see Contentlet
      */
     @Test
-    public void delete () throws DotSecurityException, DotDataException {
+    public void delete () throws Exception {
 
         //First lets create a test structure
         Structure testStructure = createStructure( "JUnit Test Structure_" + String.valueOf( new Date().getTime() ), "junit_test_structure_" + String.valueOf( new Date().getTime() ) );
 
         //Now a new contentlet
         Contentlet newContentlet = createContentlet( testStructure, null, false );
-
+        
         //Now we need to delete it
         contentletAPI.delete( newContentlet, user, false );
 
@@ -1122,6 +1130,10 @@ public class ContentletAPITest extends ContentletBaseTest {
 
         //Validations
         assertTrue( foundContentlet == null || foundContentlet.getInode() == null || foundContentlet.getInode().isEmpty() );
+        
+        // make sure the db is totally clean up
+        
+        AssetUtil.assertDeleted(newContentlet.getInode(), newContentlet.getIdentifier(), "contentlet");
     }
 
     /**
